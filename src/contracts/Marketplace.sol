@@ -58,41 +58,43 @@ contract Marketplace {
         // sha3 and now have been deprecated
         return uint(keccak256(abi.encodePacked(block.difficulty, block.timestamp, _product.sides)));
         // convert hash to integer
-        // players is an array of entrants
         
     }
     
     function rollDie(uint _id) public payable{
-        // Fetch the product
+        // Fetch the bet
         Product memory _product = products[_id];
-        // Fetch the owner
+        // Fetch the creator
         address payable _seller = _product.owner;
         // Make sure the product has a valid id
         require(_product.id > 0 && _product.id <= productCount);
         // Require that there is enough Ether in the transaction
         require(msg.value >= _product.entry);
-        // Require that the product has not been purchased already
+        // Require that the product has not been won already
         require(!_product.purchased);
-        // Require that the buyer is not the seller
+        // Require that the better is not the creator
         require(_seller != msg.sender);
-        // Transfer ownership to the buyer
-        
-        // _product.sides = random();
+        // Create random number
         randomFactor += random(_id);
+        // Make sure it is not 0
         randomFactor = (randomFactor % _product.sides) + 1 ;
+        // Store the rolled number
         _product.roll = randomFactor;
+        // Check if it is larger or not
             if(randomFactor >= _product.currentBet){
-                _product.purchased = true;
-                // _product.owner = msg.sender; 
-                
-                // Pay the seller by sending them Ether
+                // Bet is won
+                _product.purchased = true; 
+                // Pay the better by sending them Ether
                 address(msg.sender).transfer(_product.price);
                 // Trigger an event
                 emit BetStats(productCount, _product.name, _product.price, _product.roll, msg.sender, true);
             }else{
+                //Not won open for next better
                 _product.purchased = false;
+                // Trigger an event
                 emit BetStats(productCount, _product.name, _product.price, _product.roll, msg.sender, false);
             }
+            //Send the entry fee to creator
             address(_seller).transfer(msg.value);
             products[_id] = _product;
     }
@@ -101,18 +103,18 @@ contract Marketplace {
     function createProduct(string memory _name, uint _price, uint _sides, uint _currentBet, uint _entry) public payable {
     // Require a valid name
     require(bytes(_name).length > 0);
-    // Require a valid price
+    // Require a valid prize
     require(_price > 0);
      // Require a valid sides
     require(_sides > 2);
-      // Require a valid sides
+      // Require a valid entry fee
     require(_entry > 0);
-      // Require a valid sides
+      // Require a valid sides and bet
     require(_sides >= _currentBet && _currentBet > 0);
     // Increment product count
     require(msg.value >= _price);
     productCount ++;
-    // Create the product
+    // Create the bet
     products[productCount] = Product(productCount, _name, _price, _sides, _currentBet, _entry, 0, msg.sender, false);
     // Trigger an event
     emit ProductCreated(productCount, _name, _price, _sides, _currentBet, _entry, msg.sender, false);
